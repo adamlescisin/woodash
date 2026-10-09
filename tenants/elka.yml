@@ -1,0 +1,16 @@
+id: elka
+name: ELKA Fashion
+currency: CZK
+timezone: Europe/Prague
+database_url_env: ELKA_DATABASE_URL
+email:
+  send_time: "06:30"
+  recipients: []        # TODO: confirm with owner
+  language: cs
+features:
+  pos: true
+  costs: true
+  variants_size: true
+  ads_meta: false
+  ads_google: false
+  email_tool: false

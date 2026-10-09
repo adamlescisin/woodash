@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.egg-info/
+node_modules/
+.next/
+next-env.d.ts
+.env
+email_preview.html

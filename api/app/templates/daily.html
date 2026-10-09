@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="cs"><head><meta charset="utf-8"><title>{{ subject }}</title></head>
+<body style="margin:0;background:#f4f4f2;font-family:-apple-system,Segoe UI,Arial,sans-serif;color:#1a1a1a">
+<table role="presentation" width="100%" style="max-width:560px;margin:0 auto;background:#fff"><tr><td style="padding:20px">
+<p style="margin:0 0 4px;color:#666;font-size:13px">{{ tenant.name }} · {{ f.date.strftime('%-d. %-m. %Y') }}</p>
+<h1 style="margin:0 0 12px;font-size:20px">{{ subject }}</h1>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.45">{{ summary }}</p>
+
+<h2 style="font-size:15px;margin:16px 0 6px">Včera v kostce</h2>
+<table role="presentation" width="100%" style="font-size:14px;border-collapse:collapse">
+<tr style="color:#666"><td></td><td align="right">Tržba</td><td align="right">Obj.</td><td align="right">Košík</td></tr>
+{% for key, label in [('total','Celkem'),('store','Obchod'),('web','E-shop')] %}
+<tr style="border-top:1px solid #eee"><td>{{ label }}</td>
+<td align="right">{{ f.current[key].revenue|kc }}</td><td align="right">{{ f.current[key].orders }}</td>
+<td align="right">{{ f.current[key].basket|kc }}</td></tr>
+{% endfor %}
+</table>
+<p style="font-size:12px;color:#666;margin:6px 0 0">Proti loňsku (stejný den v týdnu): {{ f.yoy_pct|pct }} · proti minulému týdnu: {{ f.wow_pct|pct }}</p>
+
+{% if show_unusual %}
+<h2 style="font-size:15px;margin:16px 0 6px">Neobvyklé</h2>
+<ul style="padding-left:18px;margin:0;font-size:14px">
+{% for a in f.anomalies %}<li>Tržba {{ a.value|kc }} místo obvyklých {{ a.expected|kc }}.</li>{% endfor %}
+</ul>
+{% endif %}
+
+{% if show_stock %}
+<h2 style="font-size:15px;margin:16px 0 6px">Sklad</h2>
+<ul style="padding-left:18px;margin:0;font-size:14px">
+{% if st.broken %}<li>Rozbité velikostní řady: {% for b in st.broken %}{{ b.product_name }}{% if not loop.last %}, {% endif %}{% endfor %}</li>{% endif %}
+{% if st.sold_out %}<li>Včera došlo: {{ st.sold_out|join(', ') }}</li>{% endif %}
+{% if st.dead_crossing %}<li>{{ st.dead_crossing }} variant překročilo 90 dní bez prodeje</li>{% endif %}
+</ul>
+{% endif %}
+
+<h2 style="font-size:15px;margin:16px 0 6px">Co dnes udělat</h2>
+<ol style="padding-left:18px;margin:0;font-size:14px">{% for a in actions %}<li>{{ a }}</li>{% endfor %}</ol>
+
+<p style="font-size:11px;color:#888;margin:20px 0 0;border-top:1px solid #eee;padding-top:8px">
+Pokrytí marže známými náklady (90 dní): {{ (f.margin_coverage * 100)|round|int }} % · synchronizace: syntetická data (Phase 0)</p>
+</td></tr></table></body></html>

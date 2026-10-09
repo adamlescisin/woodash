@@ -1,0 +1,22 @@
+# One stack per host: Mac Mini (ELKA) and Hostinger VPS (slovem.eu). No ports published to the LAN
+# beyond loopback; reach it via Tailscale / Cloudflare Tunnel (spec: Security and GDPR).
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: woodash
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U woodash"], interval: 5s, retries: 10 }
+  api:
+    build: { context: ., dockerfile: api/Dockerfile }
+    env_file: .env
+    depends_on: { postgres: { condition: service_healthy } }
+    ports: ["127.0.0.1:8000:8000"]
+  web:
+    build: { context: web }
+    environment: { API_URL: "http://api:8000", TENANT: elka }
+    depends_on: [api]
+    ports: ["127.0.0.1:3000:3000"]
+volumes:
+  pgdata:

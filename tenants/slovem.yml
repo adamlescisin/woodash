@@ -1,0 +1,16 @@
+id: slovem
+name: slovem.eu
+currency: CZK         # TODO: confirm
+timezone: Europe/Prague
+database_url_env: SLOVEM_DATABASE_URL
+email:
+  send_time: "06:30"
+  recipients: []
+  language: cs
+features:
+  pos: false
+  costs: false
+  variants_size: false
+  ads_meta: false
+  ads_google: false
+  email_tool: false
