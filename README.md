@@ -19,5 +19,10 @@ Self-hosted e-commerce dashboard and Czech daily email for WooCommerce shops (EL
     python scripts/preview_email.py --out email_preview.html
     pytest api
 
+## Loading real exports (Phase 0)
+    python scripts/import_wc_products.py products.csv --as-of YYYY-MM-DD   # catalogue, stock snapshot, known costs
+    python scripts/import_wc_export.py orders.json                          # orders (products first)
+Exports contain personal data: keep them outside the repo (`data/` is git-ignored).
+
 ## Status
 Phase 0 (prototype): schema, metric views, synthetic data, Přehled, email preview. Next: Phase 1 (Woo + POS ingestion, Prodej, Sklad, live email via Brevo).

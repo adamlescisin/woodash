@@ -6,7 +6,7 @@ Stopgap for Phase 0 until the REST ingestion exists (Phase 1). Mapping and assum
   Shipping is excluded. The export shows 0 tax everywhere, so prices are treated as net (tenant `vat_payer: false`).
 - SKU 'a-b-c-d' -> style key 'a-b-c', size 'd' (supplier-style-colour-size; to be confirmed).
 - Lines without SKU get a stable placeholder SKU from the product name.
-- Order Attribution and cost are not in this export -> NULL.
+- Order Attribution is not in this export -> NULL. Known costs come from dim_variant_cost (products import).
 - Personal data: only a one-way hash of the billing e-mail is kept as customer key. Names, addresses
   and phone numbers are never copied (spec: Security and GDPR).
 """
@@ -56,13 +56,14 @@ def main() -> None:
     conn = connect(tenant)
     migrate(conn, Path(__file__).resolve().parents[1] / "db" / "migrations")
     if not a.keep:
-        conn.execute("TRUNCATE fact_order_line, fact_stock_daily, fact_traffic_daily, fact_ad_spend_daily, "
-                     "dim_variant, dim_customer, dim_date, job_run RESTART IDENTITY CASCADE")
+        conn.execute("TRUNCATE fact_order_line, dim_customer CASCADE")
 
     dates = [datetime.strptime(o["order_date"], "%Y-%m-%d %H:%M") for o in orders]
     ensure_dim_date(conn, min(dates).date(), max(dates).date())
 
-    variants: dict[str, int] = {}
+    # Catalogue comes from import_wc_products.py; unknown SKUs get placeholder variants with negative ids.
+    variants: dict[str, int] = {r["sku"]: r["variant_id"] for r in conn.execute("SELECT sku, variant_id FROM dim_variant")}
+    known = set(variants)
     customers: dict[str, tuple] = {}
     lines, skipped = [], 0
     for o, dt in zip(orders, dates):
@@ -85,7 +86,7 @@ def main() -> None:
                 continue
             sku = p["sku"] or f"NOSKU-{h(p['name']) % 10**8}"
             if sku not in variants:
-                variants[sku] = len(variants) + 1
+                variants[sku] = -(len(variants) - len(known) + 1)
             share = (p["item_price"] * qty / gross) if gross else 0
             line_disc = round(disc * share, 2)
             lines.append((int(o["order_number"]), i, dt.date(), dt.hour, channel, sku, p["name"], qty,
@@ -96,6 +97,8 @@ def main() -> None:
         for ln in lines:
             meta.setdefault(ln[5], (ln[6], ln[11], ln[2]))
         for sku, vid in variants.items():
+            if sku in known:
+                continue
             name, price, d0 = meta[sku]
             parts = sku.split("-")
             style = "-".join(parts[:3]) if len(parts) == 4 else sku
@@ -108,12 +111,15 @@ def main() -> None:
         for (oid, ln, d, hr, ch, sku, _n, qty, net, disc, cust, _p) in lines:
             cur.execute("INSERT INTO fact_order_line VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,NULL,NULL,%s,NULL,NULL,NULL)",
                         (oid, ln, d, hr, ch, variants[sku], qty, net, disc, cust))
+    conn.execute("""
+        UPDATE fact_order_line f SET unit_cost = c.unit_cost, cost_source = c.source
+        FROM dim_variant_cost c WHERE c.variant_id = f.variant_id""")
     conn.commit()
     by_ch = defaultdict(float)
     for ln in lines:
         by_ch[ln[4]] += ln[8]
     print(f"imported {len(lines)} lines from {len(orders) - skipped} orders ({skipped} skipped), "
-          f"{len(variants)} variants, {len(customers)} hashed customers; revenue by channel: "
+          f"{len(variants) - len(known)} placeholder variants, {len(customers)} hashed customers; revenue by channel: "
           + ", ".join(f"{k} {v:,.0f}" for k, v in by_ch.items()))
 
 
