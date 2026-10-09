@@ -11,9 +11,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "api"))
 
-from app.calendar_cz import holiday_name, same_day_last_year, season  # noqa: E402
+from app.calendar_cz import holiday_name, season  # noqa: E402
 from app.config import load_tenant  # noqa: E402
 from app.db import connect, migrate  # noqa: E402
+from app.loaders import ensure_dim_date  # noqa: E402
 
 SIZES = [("50", 1), ("56", 2), ("62", 3), ("68", 4), ("74", 5), ("80", 6), ("86", 7),
          ("92", 8), ("98", 9), ("104", 10), ("110", 11), ("116", 12), ("122", 13),
@@ -43,16 +44,7 @@ def main() -> None:
     conn.execute("TRUNCATE fact_order_line, fact_stock_daily, fact_traffic_daily, fact_ad_spend_daily, "
                  "dim_variant, dim_customer, dim_date, job_run RESTART IDENTITY CASCADE")
 
-    # dim_date (one extra year back so same_day_last_year always resolves)
-    d = start - timedelta(days=400)
-    rows = []
-    while d <= end + timedelta(days=1):
-        iso = d.isocalendar()
-        hn = holiday_name(d)
-        rows.append((d, iso.weekday, iso.week, d.month, d.year, season(d), hn is not None, hn, same_day_last_year(d)))
-        d += timedelta(days=1)
-    with conn.cursor() as cur:
-        cur.executemany("INSERT INTO dim_date VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)", rows)
+    ensure_dim_date(conn, start, end)
 
     # dim_variant
     variants = []  # (variant_id, product_id, price, brand, popularity, size_idx)

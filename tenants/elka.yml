@@ -1,11 +1,12 @@
 id: elka
 name: ELKA Fashion
 currency: CZK
+vat_payer: false     # export shows 0 tax on all orders; confirm
 timezone: Europe/Prague
 database_url_env: ELKA_DATABASE_URL
 email:
   send_time: "06:30"
-  recipients: []        # TODO: confirm with owner
+  recipients: ["adam@lescisin.cz"]   # more to be added later
   language: cs
 features:
   pos: true

@@ -6,3 +6,7 @@ node_modules/
 next-env.d.ts
 .env
 email_preview.html
+
+# local data exports contain personal data - never commit
+data/
+*.export.json

@@ -16,6 +16,7 @@ class Tenant:
     database_url_env: str
     email: dict = field(default_factory=dict)
     features: dict = field(default_factory=dict)
+    vat_payer: bool = True
 
     @property
     def database_url(self) -> str:
