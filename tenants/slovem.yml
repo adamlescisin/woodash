@@ -14,3 +14,9 @@ features:
   ads_meta: false
   ads_google: false
   email_tool: false
+woo:
+  url_env: SLOVEM_WC_URL
+  key_env: SLOVEM_WC_KEY
+  secret_env: SLOVEM_WC_SECRET
+  cost_meta_keys: []
+  backfill_from: "2023-10-01"

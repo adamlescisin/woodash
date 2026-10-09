@@ -24,5 +24,11 @@ Self-hosted e-commerce dashboard and Czech daily email for WooCommerce shops (EL
     python scripts/import_wc_export.py orders.json                          # orders (products first)
 Exports contain personal data: keep them outside the repo (`data/` is git-ignored).
 
+## Live ingestion (Phase 1)
+`python -m app.worker elka` (the `worker` service) syncs orders every 15 min (cursor `modified_after`, raw JSON kept in `raw_wc_*`),
+the catalogue + stock snapshot nightly at 02:00, and sends the daily email at the tenant's `send_time`
+(dry run until `BREVO_API_KEY` and `email.sender` are set). Requires the `*_WC_URL/KEY/SECRET` env vars (read-only keys).
+Integration test: `TEST_DATABASE_URL=postgresql://... pytest api`.
+
 ## Status
 Phase 0 (prototype): schema, metric views, synthetic data, Přehled, email preview. Next: Phase 1 (Woo + POS ingestion, Prodej, Sklad, live email via Brevo).

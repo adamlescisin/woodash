@@ -73,3 +73,12 @@ def suggested_actions(facts: dict, stock: dict) -> list[str]:
     if facts["current"]["store"]["orders"] and not actions:
         actions.append("Žádná akutní akce — pokračovat podle plánu.")
     return actions[:3]
+
+
+def sync_health(conn) -> dict:
+    """Last successful run per job and any failed job since, for the dashboard and the email footer."""
+    rows = conn.execute(
+        "SELECT job, MAX(finished_at) FILTER (WHERE errors = 0) AS last_ok, "
+        "COUNT(*) FILTER (WHERE errors > 0 AND finished_at > now() - interval '24 hours') AS failed_24h "
+        "FROM job_run WHERE job IN ('orders','catalogue') GROUP BY job").fetchall()
+    return {r["job"]: {"last_ok": r["last_ok"], "failed_24h": r["failed_24h"]} for r in rows}

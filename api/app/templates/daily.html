@@ -37,5 +37,7 @@
 <ol style="padding-left:18px;margin:0;font-size:14px">{% for a in actions %}<li>{{ a }}</li>{% endfor %}</ol>
 
 <p style="font-size:11px;color:#888;margin:20px 0 0;border-top:1px solid #eee;padding-top:8px">
-Pokrytí marže známými náklady (90 dní): {{ (f.margin_coverage * 100)|round|int }} % · synchronizace: syntetická data (Phase 0)</p>
+Pokrytí marže známými náklady (90 dní): {{ (f.margin_coverage * 100)|round|int }} % ·
+{% if health.orders %}poslední synchronizace objednávek: {{ health.orders.last_ok.strftime('%-d. %-m. %H:%M') if health.orders.last_ok else 'nikdy' }}{% else %}synchronizace: zatím neběžela{% endif %}</p>
+{% if health.values()|selectattr('failed_24h')|list %}<p style="font-size:12px;color:#b00020;margin:4px 0 0">⚠ Některá synchronizace za posledních 24 h selhala — data nemusí být aktuální.</p>{% endif %}
 </td></tr></table></body></html>

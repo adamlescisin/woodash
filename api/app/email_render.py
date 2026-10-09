@@ -3,7 +3,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .facts import stock_alerts, suggested_actions, yesterday_facts
+from .facts import stock_alerts, suggested_actions, sync_health, yesterday_facts
 
 env = Environment(loader=FileSystemLoader(Path(__file__).parent / "templates"),
                   autoescape=select_autoescape(["html"]))
@@ -35,12 +35,13 @@ def summary(f: dict) -> str:
 def build_email(conn, today: date, tenant) -> dict:
     f = yesterday_facts(conn, today)
     st = stock_alerts(conn)
+    health = sync_health(conn)
     subject = f"Včera {kc(f['current']['total']['revenue'])} ({pct(f['yoy_pct'])} r/r)"
     if st["sold_out"]:
         subject += f" · {len(st['sold_out'])} velikostí došlo"
     show_unusual = bool(f["anomalies"])
     show_stock = bool(st["broken"] or st["sold_out"] or st["dead_crossing"])
     html = env.get_template("daily.html").render(
-        tenant=tenant, f=f, st=st, subject=subject, summary=summary(f), actions=suggested_actions(f, st),
+        tenant=tenant, f=f, st=st, health=health, subject=subject, summary=summary(f), actions=suggested_actions(f, st),
         show_unusual=show_unusual, show_stock=show_stock)
     return {"subject": subject, "html": html}
