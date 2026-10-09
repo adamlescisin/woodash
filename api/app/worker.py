@@ -1,13 +1,15 @@
 """Scheduler: orders every 15 min, catalogue nightly at 02:00, daily email at the tenant's send time."""
 import logging
+import os
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from .brevo import send_email
 from .config import load_tenant, woo_client
-from .db import connect
+from .db import connect, migrate
 from .email_render import build_email
 from .ingest import run_log, sync_catalogue, sync_orders
 
@@ -44,6 +46,9 @@ def main(tenant_id: str) -> None:
     tenant = load_tenant(tenant_id)
     client = woo_client(tenant)
     tz = ZoneInfo(tenant.timezone)
+    mig = Path(os.environ.get("MIGRATIONS_DIR", Path(__file__).resolve().parents[2] / "db" / "migrations"))
+    with connect(tenant) as conn:
+        migrate(conn, mig)  # schema is applied on every start; migrations are idempotent
     while True:
         with connect(tenant) as conn:
             tick(tenant, conn, client, datetime.now(tz))
