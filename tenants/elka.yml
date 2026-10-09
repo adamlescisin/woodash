@@ -7,7 +7,7 @@ database_url_env: ELKA_DATABASE_URL
 email:
   send_time: "06:30"
   recipients: ["adam@lescisin.cz"]   # more to be added later
-  sender: {email: "", name: "woodash"}   # TODO: a sender address verified in Brevo
+  sender: {email: "info@mimimami.cz", name: "mimimami"}
   language: cs
 features:
   pos: true

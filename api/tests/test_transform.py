@@ -43,6 +43,9 @@ def test_customer_key_is_case_insensitive_hash_without_email():
 
 def test_channel_and_attribution_defaults():
     assert channel_of({"created_via": "checkout"}) == "web"
+    assert channel_of({"created_via": "point-of-sale"}) == "store"
+    assert channel_of({"created_via": "admin", "meta_data": [{"key": "wc_pos_register_id", "value": "3"}]}) == "store"
+    assert channel_of({"created_via": "admin", "meta_data": [{"key": "wc_pos_register_id", "value": "0"}]}) == "web"
     assert attribution({}) == (None, None, None)
 
 

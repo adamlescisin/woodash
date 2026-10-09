@@ -20,8 +20,19 @@ def customer_key(order: dict) -> int | None:
     return cid if cid > 0 else None
 
 
+POS_META_KEYS = ("wc_pos_order_type", "wc_pos_register_id", "wc_pos_id_register")
+
+
 def channel_of(order: dict) -> str:
-    return "store" if "pos" in (order.get("created_via") or "").lower() else "web"
+    """Store = created by a POS. Covers WooCommerce Point of Sale (Actuality Extensions), which marks orders
+    with `created_via` (pos / point-of-sale) and `wc_pos_*` meta; the exact value is verified on the first real sync."""
+    via = (order.get("created_via") or "").lower()
+    if "pos" in via or "point-of-sale" in via or "point_of_sale" in via:
+        return "store"
+    meta = {m.get("key"): m.get("value") for m in order.get("meta_data", [])}
+    if any(meta.get(k) not in (None, "", 0, "0") for k in POS_META_KEYS):
+        return "store"
+    return "web"
 
 
 def attribution(order: dict) -> tuple[str | None, str | None, str | None]:
