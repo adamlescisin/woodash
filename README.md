@@ -29,7 +29,7 @@ Exports contain personal data: keep them outside the repo (`data/` is git-ignore
     cp .env.example .env     # edit: POSTGRES_PASSWORD (same password inside ELKA_DATABASE_URL), WC keys, BREVO_API_KEY
     docker compose up -d --build
     docker compose logs -f worker
-Dashboard: http://localhost:3000 (API on :8000), both bound to localhost only. The `elka` database and schema are created automatically.
+Dashboard: http://localhost:3000 (API on :8000), both bound to localhost only; change `WEB_PORT` / `API_PORT` in `.env` if those are taken. The `elka` database and schema are created automatically.
 
 ## Live ingestion (Phase 1)
 `python -m app.worker elka` (the `worker` service) syncs orders every 15 min (cursor `modified_after`, raw JSON kept in `raw_wc_*`),
