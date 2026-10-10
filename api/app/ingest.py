@@ -135,8 +135,9 @@ def sync_orders(conn, client, tenant: Tenant, today: date) -> int:
             try:
                 item = client.get(path)
                 _set_stock(conn, vid, today, item.get("stock_quantity"), _price(item), None)
-            except Exception:  # noqa: BLE001  one missing product must not fail the order sync
+            except Exception as e:  # noqa: BLE001  one missing product must not fail the order sync
                 st["errors"] += 1
+                st["message"] = st["message"] or f"stock refresh failed for {path}: {type(e).__name__}: {e}"[:300]
         if newest:
             conn.execute("INSERT INTO sync_state VALUES ('orders', %s) ON CONFLICT (job) DO UPDATE SET cursor = EXCLUDED.cursor",
                          (datetime.fromisoformat(newest).replace(tzinfo=timezone.utc),))

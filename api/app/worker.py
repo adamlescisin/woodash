@@ -43,6 +43,7 @@ def _safe(fn, conn, client, tenant, today):
 
 def main(tenant_id: str) -> None:
     logging.basicConfig(level=logging.INFO)
+    logging.getLogger("httpx").setLevel(logging.WARNING)  # one line per API request drowns real errors
     tenant = load_tenant(tenant_id)
     client = woo_client(tenant)
     tz = ZoneInfo(tenant.timezone)

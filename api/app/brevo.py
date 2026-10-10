@@ -13,5 +13,6 @@ def send_email(tenant, subject: str, html: str, transport: httpx.BaseTransport |
     r = httpx.Client(transport=transport, timeout=30).post(
         "https://api.brevo.com/v3/smtp/email", headers={"api-key": key},
         json={"sender": sender, "to": to, "subject": subject, "htmlContent": html})
-    r.raise_for_status()
+    if r.is_error:
+        raise RuntimeError(f"Brevo {r.status_code}: {r.text[:300]}")
     return True
