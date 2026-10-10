@@ -124,6 +124,15 @@ def main() -> None:
                     ratio = BRANDS[v[3]]
                     cur.execute("INSERT INTO fact_stock_daily VALUES (%s,%s,%s,%s,%s)",
                                 (v[0], d - timedelta(days=1), q, round(q * price / 1.21 / ratio, 2), round(q * price, 2)))
+    chan = [("Organic Search", 60), ("Direct", 40), ("Paid Social", 25), ("Email", 12), ("Organic Social", 18)]
+    with conn.cursor() as cur:
+        d = start
+        while d <= end:
+            for name, base in chan:
+                sessions = max(0, int(rng.gauss(base, base * 0.3)))
+                cur.execute("INSERT INTO fact_traffic_daily VALUES (%s,%s,%s,%s,%s,%s)",
+                            (d, name, sessions, int(sessions * 0.8), int(sessions * 0.08), int(sessions * 0.03)))
+            d += timedelta(days=1)
     conn.commit()
     print(f"seeded {order_id - 1} orders, {len(customers)} customers, {len(variants)} variants "
           f"for tenant {args.tenant} ({start}..{end})")

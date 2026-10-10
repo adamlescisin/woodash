@@ -114,3 +114,18 @@ def test_refresh_line_costs_applies_brand_override_and_known_cost(conn):
     rows = {r["variant_id"]: r for r in conn.execute("SELECT * FROM fact_order_line").fetchall()}
     assert rows[20]["unit_cost"] == 150 and rows[20]["cost_source"] == "estimated"   # brand override: 50 %
     assert rows[11]["cost_source"] == "known" and rows[11]["unit_cost"] == 200
+
+
+def test_channel_queries_run(conn):
+    from app import queries as q
+    client = WooClient("https://shop.test", "k", "s", transport=httpx.MockTransport(handler))
+    today = date(2026, 10, 10)
+    sync_catalogue(conn, client, TENANT, today)
+    sync_orders(conn, client, TENANT, today)
+    conn.execute("INSERT INTO fact_traffic_daily VALUES ('2026-10-08', 'Direct', 100, 80, 8, 3)")
+    conn.commit()
+    start, end = date(2026, 9, 10), date(2026, 10, 9)
+    src = q.order_sources(conn, start, end)
+    assert src["rows"][0]["source"] == "(neuvedeno)" and src["attribution_coverage"] == 0
+    tr = q.traffic(conn, start, end)
+    assert tr["sessions"] == 100 and tr["web_orders"] == 1 and tr["conversion_rate"] == 0.01

@@ -93,3 +93,13 @@ def brands(tenant_id: str):
     with connect(tenant) as conn:
         rows = conn.execute("SELECT brand FROM dim_variant GROUP BY brand ORDER BY COUNT(*) DESC").fetchall()
     return [r["brand"] for r in rows]
+
+
+@app.get("/api/{tenant_id}/channels")
+def channels(tenant_id: str, days: int = 30, as_of: date | None = None):
+    from . import queries as q
+    tenant, _ = _conn(tenant_id)
+    start, end = _period(max(1, min(days, 365)), as_of)
+    with connect(tenant) as conn:
+        return _num({"period": {"start": start, "end": end},
+                     "sources": q.order_sources(conn, start, end), "traffic": q.traffic(conn, start, end)})

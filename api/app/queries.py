@@ -162,3 +162,50 @@ def size_grid(conn, product_id: int) -> list[dict]:
            LEFT JOIN fact_order_line f ON f.variant_id = v.variant_id
            WHERE v.product_id = %s GROUP BY v.variant_id, v.sku, v.size, v.size_order, v.colour, s.stock_qty
            ORDER BY v.size_order, v.colour""", (product_id,)).fetchall()
+
+
+# ------------------------------------------------------------- channels
+
+def order_sources(conn, start: date, end: date) -> dict:
+    """E-shop revenue / orders / new customers by Order Attribution source and medium, plus attribution coverage."""
+    ly_s, ly_e = _ly(start, end)
+    rows = conn.execute(
+        """SELECT COALESCE(f.source, '(neuvedeno)') AS source, COALESCE(f.medium, '') AS medium,
+               COALESCE(SUM(f.net_revenue) FILTER (WHERE f.date BETWEEN %s AND %s), 0) AS revenue,
+               COALESCE(SUM(f.net_revenue) FILTER (WHERE f.date BETWEEN %s AND %s), 0) AS revenue_ly,
+               COUNT(DISTINCT f.order_id) FILTER (WHERE f.date BETWEEN %s AND %s) AS orders,
+               COUNT(DISTINCT f.customer_id) FILTER (WHERE f.date BETWEEN %s AND %s
+                     AND c.first_order_date BETWEEN %s AND %s) AS new_customers
+           FROM fact_order_line f LEFT JOIN dim_customer c USING (customer_id)
+           WHERE f.channel = 'web' AND f.date BETWEEN %s AND %s
+           GROUP BY 1, 2
+           HAVING COALESCE(SUM(f.net_revenue) FILTER (WHERE f.date BETWEEN %s AND %s), 0) > 0
+           ORDER BY revenue DESC LIMIT 20""",
+        [start, end, ly_s, ly_e, start, end, start, end, start, end, ly_s, end, start, end]).fetchall()
+    total = sum(r["revenue"] for r in rows)
+    known = sum(r["revenue"] for r in rows if r["source"] != "(neuvedeno)")
+    return {"rows": rows, "attribution_coverage": (known / total) if total else None}
+
+
+def traffic(conn, start: date, end: date) -> dict:
+    """GA4 sessions and funnel by default channel group, with the e-shop order conversion rate overall."""
+    ly_s, ly_e = _ly(start, end)
+    rows = conn.execute(
+        """SELECT channel,
+               COALESCE(SUM(sessions) FILTER (WHERE date BETWEEN %s AND %s), 0) AS sessions,
+               COALESCE(SUM(sessions) FILTER (WHERE date BETWEEN %s AND %s), 0) AS sessions_ly,
+               COALESCE(SUM(users) FILTER (WHERE date BETWEEN %s AND %s), 0) AS users,
+               COALESCE(SUM(add_to_carts) FILTER (WHERE date BETWEEN %s AND %s), 0) AS add_to_carts,
+               COALESCE(SUM(checkouts) FILTER (WHERE date BETWEEN %s AND %s), 0) AS checkouts
+           FROM fact_traffic_daily WHERE date BETWEEN %s AND %s
+           GROUP BY channel HAVING SUM(sessions) FILTER (WHERE date BETWEEN %s AND %s) > 0
+           ORDER BY sessions DESC""",
+        [start, end, ly_s, ly_e, start, end, start, end, start, end, ly_s, end, start, end]).fetchall()
+    orders = conn.execute(
+        "SELECT COUNT(DISTINCT order_id) AS n FROM fact_order_line WHERE channel = 'web' AND date BETWEEN %s AND %s",
+        (start, end)).fetchone()["n"]
+    sessions = sum(r["sessions"] for r in rows)
+    last = conn.execute("SELECT MAX(date) AS d, MIN(date) AS first FROM fact_traffic_daily").fetchone()
+    return {"rows": rows, "web_orders": orders, "sessions": sessions,
+            "conversion_rate": (orders / sessions) if sessions else None,
+            "data_from": last["first"], "data_to": last["d"]}

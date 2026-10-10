@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 export const metadata = { title: "woodash" };
 
-const links = [["/", "Přehled"], ["/prodej", "Prodej"], ["/sklad", "Sklad"]];
+const links = [["/", "Přehled"], ["/prodej", "Prodej"], ["/kanaly", "Kanály"], ["/sklad", "Sklad"]];
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

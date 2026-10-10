@@ -6,7 +6,7 @@ Self-hosted e-commerce dashboard and Czech daily email for WooCommerce shops (EL
 - `db/migrations/` — star schema and one SQL view per metric
 - `tenants/*.yml` — per-tenant config and feature flags
 - `api/` — FastAPI (facts, email rendering); `api/app/facts.py` computes every number
-- `web/` — Next.js dashboard (Přehled, Prodej, Sklad)
+- `web/` — Next.js dashboard (Přehled, Prodej, Kanály, Sklad)
 - `scripts/` — `seed_synthetic.py` (Phase 0 demo data), `preview_email.py`
 
 ## Phase 0 quick start
