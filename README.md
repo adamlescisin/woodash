@@ -37,5 +37,8 @@ the catalogue + stock snapshot nightly at 02:00, and sends the daily email at th
 (dry run until `BREVO_API_KEY` and `email.sender` are set). Requires the `*_WC_URL/KEY/SECRET` env vars (read-only keys).
 Integration test: `TEST_DATABASE_URL=postgresql://... pytest api`.
 
+## GA4 (Phase 2)
+The worker reads GA4 nightly at 03:00 (sessions, users, add-to-carts, checkouts per channel). Put the service-account key at `secrets/google-service-account.json` on the host (git-ignored) and give that service account Viewer access to the GA4 property.
+
 ## Status
 Phase 0 (prototype): schema, metric views, synthetic data, Přehled, email preview. Phase 1: Woo ingestion, daily email via Brevo, Prodej and Sklad screens. Next: Phase 2 (GA4, Search Console, Kanály, Zákazníci, invoice extraction).

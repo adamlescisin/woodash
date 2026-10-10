@@ -25,3 +25,8 @@ woo:
 margin:
   default: 0.20          # assumed gross margin where cost is unknown (cost = 80 % of the realised unit price)
   brands: {}             # per-brand overrides once real ratios are known, e.g. {Mayoral: 0.35}
+ga4:
+  property_id: "465019231"
+  measurement_id: G-MYGHJ8F74S
+  credentials_env: GOOGLE_APPLICATION_CREDENTIALS   # path to the service-account JSON key, kept outside git
+  backfill_from: "2023-10-01"

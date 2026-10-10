@@ -11,3 +11,4 @@ email_preview.html
 data/
 *.export.json
 tsconfig.tsbuildinfo
+secrets/

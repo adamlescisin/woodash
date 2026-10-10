@@ -19,6 +19,7 @@ class Tenant:
     vat_payer: bool = True
     woo: dict = field(default_factory=dict)
     margin: dict = field(default_factory=dict)
+    ga4: dict = field(default_factory=dict)
 
     @property
     def database_url(self) -> str:

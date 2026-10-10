@@ -11,6 +11,7 @@ from .brevo import send_email
 from .config import load_tenant, woo_client
 from .db import connect, migrate
 from .email_render import build_email
+from .ga4 import sync_ga4
 from .ingest import refresh_line_costs, run_log, sync_catalogue, sync_orders
 
 log = logging.getLogger("worker")
@@ -27,6 +28,8 @@ def tick(tenant, conn, client, now: datetime) -> None:
         _safe(sync_orders, conn, client, tenant, now.date())
     if hhmm >= "02:00" and (last("catalogue") is None or last("catalogue").astimezone(now.tzinfo).date() != now.date()):
         _safe(sync_catalogue, conn, client, tenant, now.date())
+    if tenant.ga4 and hhmm >= "03:00" and (last("ga4") is None or last("ga4").astimezone(now.tzinfo).date() != now.date()):
+        _safe(lambda c, _cl, t, today: sync_ga4(c, t, today), conn, client, tenant, now.date())
     if hhmm >= tenant.email.get("send_time", "06:30") and (last("email") is None or last("email").astimezone(now.tzinfo).date() != now.date()):
         with run_log(conn, "email") as st:
             mail = build_email(conn, now.date(), tenant)
@@ -38,7 +41,7 @@ def _safe(fn, conn, client, tenant, today):
     try:
         fn(conn, client, tenant, today)
     except Exception:  # noqa: BLE001  logged in job_run; the loop keeps going
-        log.exception("%s failed", fn.__name__)
+        log.exception("%s failed", getattr(fn, "__name__", "job"))
 
 
 def main(tenant_id: str) -> None:

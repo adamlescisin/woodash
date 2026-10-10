@@ -80,5 +80,5 @@ def sync_health(conn) -> dict:
     rows = conn.execute(
         "SELECT job, MAX(finished_at) FILTER (WHERE errors = 0) AS last_ok, "
         "COUNT(*) FILTER (WHERE errors > 0 AND finished_at > now() - interval '24 hours') AS failed_24h "
-        "FROM job_run WHERE job IN ('orders','catalogue') GROUP BY job").fetchall()
+        "FROM job_run WHERE job IN ('orders','catalogue','ga4') GROUP BY job").fetchall()
     return {r["job"]: {"last_ok": r["last_ok"], "failed_24h": r["failed_24h"]} for r in rows}
