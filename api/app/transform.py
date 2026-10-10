@@ -4,7 +4,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 COUNTED_STATUSES = {"completed", "processing"}
-DEFAULT_COST_KEYS = ("_wc_cog_cost", "_cost", "cost_of_goods", "_purchase_price")
+DEFAULT_COST_KEYS = ("_cogs_total_value", "_wc_cog_cost", "_cost", "cost_of_goods", "_purchase_price")
 
 
 def h(s: str) -> int:
@@ -77,6 +77,13 @@ def order_lines(order: dict, tz: str, refunds: list[dict] | None = None) -> list
 
 
 def cost_of(item: dict, keys=DEFAULT_COST_KEYS) -> float | None:
+    """Unit cost from WooCommerce COGS (REST `cost_of_goods_sold.total_value`) or the first configured meta key."""
+    try:
+        v = float((item.get("cost_of_goods_sold") or {}).get("total_value") or 0)
+        if v > 0:
+            return v
+    except (TypeError, ValueError):
+        pass
     meta = {m.get("key"): m.get("value") for m in item.get("meta_data", [])}
     for k in keys:
         try:

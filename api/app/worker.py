@@ -11,7 +11,7 @@ from .brevo import send_email
 from .config import load_tenant, woo_client
 from .db import connect, migrate
 from .email_render import build_email
-from .ingest import run_log, sync_catalogue, sync_orders
+from .ingest import refresh_line_costs, run_log, sync_catalogue, sync_orders
 
 log = logging.getLogger("worker")
 
@@ -50,6 +50,7 @@ def main(tenant_id: str) -> None:
     mig = Path(os.environ.get("MIGRATIONS_DIR", Path(__file__).resolve().parents[2] / "db" / "migrations"))
     with connect(tenant) as conn:
         migrate(conn, mig)  # schema is applied on every start; migrations are idempotent
+        refresh_line_costs(conn, tenant)  # backfill cost / estimated margin on lines synced before this setting existed
     while True:
         with connect(tenant) as conn:
             tick(tenant, conn, client, datetime.now(tz))

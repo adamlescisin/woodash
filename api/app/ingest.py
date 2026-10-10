@@ -61,7 +61,7 @@ def _price(item: dict, fallback: float = 0.0) -> float:
         return fallback
 
 
-def _store_item(conn, item: dict, parent: dict | None, tenant: Tenant, today: date) -> int:
+def _store_item(conn, item: dict, parent: dict | None, tenant: Tenant, today: date, stats: dict) -> int:
     src = parent or item
     brand = next((b["name"] for b in src.get("brands", [])), None) or \
         next((a["options"][0] for a in src.get("attributes", []) if (a.get("name") or "").lower() in ("značka", "brand") and a.get("options")), None) or \
@@ -73,6 +73,9 @@ def _store_item(conn, item: dict, parent: dict | None, tenant: Tenant, today: da
                     attr(item, "velikost"), attr(item, "barva"), price)
     keys = tenant.woo.get("cost_meta_keys") or ()
     cost = cost_of(item, keys) or (cost_of(parent, keys) if parent else None)
+    if cost and price and cost >= price:  # COGS values are unreliable: a cost at or above the selling price is ignored
+        stats["implausible_costs"] = stats.get("implausible_costs", 0) + 1
+        cost = None
     if cost:
         conn.execute("INSERT INTO dim_variant_cost VALUES (%s,%s,'known') ON CONFLICT (variant_id) DO UPDATE SET "
                      "unit_cost=EXCLUDED.unit_cost, source='known'", (vid, cost))
@@ -90,13 +93,34 @@ def sync_catalogue(conn, client, tenant: Tenant, today: date) -> int:
                          "fetched_at = now(), payload = EXCLUDED.payload", (prod["id"], Jsonb(prod)))
             if prod["type"] == "variable":
                 for var in client.pages(f"/products/{prod['id']}/variations"):
-                    _store_item(conn, var, prod, tenant, today)
+                    _store_item(conn, var, prod, tenant, today, st)
                     st["rows"] += 1
             elif prod.get("sku"):
-                _store_item(conn, prod, None, tenant, today)
+                _store_item(conn, prod, None, tenant, today, st)
                 st["rows"] += 1
             conn.commit()
+        refresh_line_costs(conn, tenant)
+        if st.get("implausible_costs"):
+            st["message"] = f"{st['implausible_costs']} implausible costs (>= price) ignored"
         return st["rows"]
+
+
+def refresh_line_costs(conn, tenant: Tenant) -> None:
+    """Known unit cost where we have one; otherwise an estimate from the tenant's default margin
+    (spec: brand default ratio, labelled `estimated`). Runs after every catalogue sync."""
+    conn.execute("""UPDATE fact_order_line f SET unit_cost = c.unit_cost, cost_source = 'known'
+                    FROM dim_variant_cost c WHERE c.variant_id = f.variant_id""")
+    default = float(tenant.margin.get("default", 0.20))
+    for brand, m in [(None, default), *tenant.margin.get("brands", {}).items()]:
+        conn.execute(
+            """UPDATE fact_order_line f SET unit_cost = ROUND((f.net_revenue / NULLIF(f.qty, 0) * (1 - %s::numeric))::numeric, 2),
+                      cost_source = 'estimated'
+               FROM dim_variant v
+               WHERE v.variant_id = f.variant_id AND f.qty > 0
+                 AND NOT EXISTS (SELECT 1 FROM dim_variant_cost c WHERE c.variant_id = f.variant_id)
+                 AND (%s::text IS NULL AND v.brand <> ALL(%s) OR v.brand = %s)""",
+            (m, brand, list(tenant.margin.get("brands", {})), brand))
+    conn.commit()
 
 
 def sync_orders(conn, client, tenant: Tenant, today: date) -> int:
@@ -121,6 +145,9 @@ def sync_orders(conn, client, tenant: Tenant, today: date) -> int:
                                  "SET first_order_date = LEAST(dim_customer.first_order_date, EXCLUDED.first_order_date)",
                                  (cust, ln["date"], ln["channel"]))
                 c = conn.execute("SELECT unit_cost, source FROM dim_variant_cost WHERE variant_id = %s", (ln["variant_id"],)).fetchone()
+                if c is None and ln["qty"] > 0:  # no known cost: estimate from the default margin, labelled 'estimated'
+                    m = tenant.margin.get("brands", {}).get(_brand(conn, ln["variant_id"]), tenant.margin.get("default", 0.20))
+                    c = {"unit_cost": round(ln["net_revenue"] / ln["qty"] * (1 - m), 2), "source": "estimated"}
                 conn.execute(
                     "INSERT INTO fact_order_line VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                     (ln["order_id"], ln["line_no"], ln["date"], ln["hour"], ln["channel"], ln["variant_id"], ln["qty"],
@@ -143,6 +170,11 @@ def sync_orders(conn, client, tenant: Tenant, today: date) -> int:
                          (datetime.fromisoformat(newest).replace(tzinfo=timezone.utc),))
         conn.commit()
         return st["rows"]
+
+
+def _brand(conn, variant_id: int) -> str | None:
+    row = conn.execute("SELECT brand FROM dim_variant WHERE variant_id = %s", (variant_id,)).fetchone()
+    return row and row["brand"]
 
 
 def o_line_product(order: dict, ln: dict) -> int:

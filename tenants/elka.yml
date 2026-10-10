@@ -20,5 +20,8 @@ woo:
   url_env: ELKA_WC_URL
   key_env: ELKA_WC_KEY
   secret_env: ELKA_WC_SECRET
-  cost_meta_keys: ["_wc_cog_cost", "_cost", "cost_of_goods", "_purchase_price"]   # TODO: confirm which holds "Nákupní cena"
+  cost_meta_keys: ["_cogs_total_value", "_wc_cog_cost", "_cost", "cost_of_goods", "_purchase_price"]
   backfill_from: "2023-10-01"
+margin:
+  default: 0.20          # assumed gross margin where cost is unknown (cost = 80 % of the realised unit price)
+  brands: {}             # per-brand overrides once real ratios are known, e.g. {Mayoral: 0.35}

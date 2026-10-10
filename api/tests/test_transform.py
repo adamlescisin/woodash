@@ -53,3 +53,8 @@ def test_cost_meta_keys():
     item = {"meta_data": [{"key": "_cost", "value": "123,5"}]}
     assert cost_of(item) == 123.5
     assert cost_of(item, ("other",)) is None
+
+
+def test_cost_from_rest_cogs_field():
+    assert cost_of({"cost_of_goods_sold": {"total_value": 12.5}, "meta_data": []}) == 12.5
+    assert cost_of({"cost_of_goods_sold": {"total_value": 0}, "meta_data": [{"key": "_cogs_total_value", "value": "7"}]}) == 7
