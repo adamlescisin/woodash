@@ -6,7 +6,7 @@ Self-hosted e-commerce dashboard and Czech daily email for WooCommerce shops (EL
 - `db/migrations/` — star schema and one SQL view per metric
 - `tenants/*.yml` — per-tenant config and feature flags
 - `api/` — FastAPI (facts, email rendering); `api/app/facts.py` computes every number
-- `web/` — Next.js dashboard (Přehled so far)
+- `web/` — Next.js dashboard (Přehled, Prodej, Sklad)
 - `scripts/` — `seed_synthetic.py` (Phase 0 demo data), `preview_email.py`
 
 ## Phase 0 quick start
@@ -38,4 +38,4 @@ the catalogue + stock snapshot nightly at 02:00, and sends the daily email at th
 Integration test: `TEST_DATABASE_URL=postgresql://... pytest api`.
 
 ## Status
-Phase 0 (prototype): schema, metric views, synthetic data, Přehled, email preview. Next: Phase 1 (Woo + POS ingestion, Prodej, Sklad, live email via Brevo).
+Phase 0 (prototype): schema, metric views, synthetic data, Přehled, email preview. Phase 1: Woo ingestion, daily email via Brevo, Prodej and Sklad screens. Next: Phase 2 (GA4, Search Console, Kanály, Zákazníci, invoice extraction).

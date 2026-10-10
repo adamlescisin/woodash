@@ -71,3 +71,20 @@ def test_catalogue_then_orders_roundtrip(conn):
     sync_orders(conn, client, TENANT, today)  # idempotent: same order again does not duplicate lines
     assert conn.execute("SELECT count(*) AS n FROM fact_order_line").fetchone()["n"] == 1
     assert conn.execute("SELECT count(*) AS n FROM job_run WHERE errors = 0").fetchone()["n"] == 3
+
+
+def test_screen_queries_run_on_synced_data(conn):
+    from app import queries as q
+    client = WooClient("https://shop.test", "k", "s", transport=httpx.MockTransport(handler))
+    today = date(2026, 10, 10)
+    sync_catalogue(conn, client, TENANT, today)
+    sync_orders(conn, client, TENANT, today)
+    start, end = date(2026, 9, 10), date(2026, 10, 9)
+    brands = q.ranking(conn, start, end, "all", None, "brand")
+    assert brands[0]["name"] == "Mayoral" and brands[0]["revenue"] == 900
+    assert q.basket(conn, start, end, "web", None)["orders"] == 1
+    assert q.top_products(conn, start, end, "all", "Mayoral")[0]["units"] == 2
+    assert q.heatmap(conn, start, end, None) == []  # no store orders
+    assert set(q.style_lists(conn, None)) == {"reorder", "markdown"}
+    assert q.broken_curves(conn, None) == [] and q.dead_stock(conn, None)["top"] == []
+    assert q.size_grid(conn, 10)[0]["size"] == "68 (4-6 měs.)"
